@@ -1,0 +1,14 @@
+# AWS SAM build directory
+.aws-sam/
+
+# Build outputs
+dist/
+
+# Dependencies
+node_modules/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
