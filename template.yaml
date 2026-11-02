@@ -1,7 +1,16 @@
-
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: SAM login demo
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment stage environment (dev, staging, prod)
 
 Resources:
   LoginFunction:
@@ -10,6 +19,9 @@ Resources:
       CodeUri: backend/
       Handler: index.handler
       Runtime: nodejs24.x
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
       Events:
         Login:
           Type: HttpApi

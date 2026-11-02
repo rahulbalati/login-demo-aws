@@ -3,13 +3,24 @@ name: Deploy to AWS
 on:
   push:
     branches:
-      - main
-      - master
+      - dev
+      - staging
+      - prod
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
 
 env:
   AWS_REGION: us-east-1
-  STACK_NAME: sam-login-rahul
+  BASE_STACK_NAME: sam-login-rahul
 
 jobs:
   deploy:
@@ -19,6 +30,35 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Resolve Environment & Stack Name
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET_ENV="${{ github.event.inputs.environment }}"
+          else
+            case "${{ github.ref_name }}" in
+              dev)
+                TARGET_ENV="dev"
+                ;;
+              staging)
+                TARGET_ENV="staging"
+                ;;
+              prod)
+                TARGET_ENV="prod"
+                ;;
+              *)
+                TARGET_ENV="dev"
+                ;;
+            esac
+          fi
+
+          STACK_NAME="${{ env.BASE_STACK_NAME }}-${TARGET_ENV}"
+
+          echo "Target Environment: $TARGET_ENV"
+          echo "Stack Name: $STACK_NAME"
+
+          echo "TARGET_ENV=$TARGET_ENV" >> $GITHUB_ENV
+          echo "STACK_NAME=$STACK_NAME" >> $GITHUB_ENV
 
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v2
@@ -40,14 +80,17 @@ jobs:
           sam deploy \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
+            --config-env ${{ env.TARGET_ENV }} \
             --stack-name ${{ env.STACK_NAME }} \
+            --s3-prefix ${{ env.STACK_NAME }} \
+            --parameter-overrides Stage=${{ env.TARGET_ENV }} \
             --resolve-s3 \
             --capabilities CAPABILITY_IAM \
             --region ${{ env.AWS_REGION }}
 
       - name: Deploy Frontend to S3 & Invalidate CloudFront
         run: |
-          echo "Fetching CloudFormation stack outputs..."
+          echo "Fetching CloudFormation outputs for ${{ env.STACK_NAME }}..."
           API_URL=$(aws cloudformation describe-stacks \
             --stack-name ${{ env.STACK_NAME }} \
             --region ${{ env.AWS_REGION }} \
@@ -89,7 +132,9 @@ jobs:
             --paths "/*"
 
           # Output summary to GitHub Actions UI
-          echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Deployment Successful (\`${{ env.TARGET_ENV }}\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`${{ env.TARGET_ENV }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Stack Name:** \`${{ env.STACK_NAME }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Frontend URL:** $WEBSITE_URL" >> $GITHUB_STEP_SUMMARY
           echo "- **API URL:** $API_URL" >> $GITHUB_STEP_SUMMARY
           echo "- **S3 Bucket:** \`$BUCKET_NAME\`" >> $GITHUB_STEP_SUMMARY

@@ -1,13 +1,37 @@
 version = 0.1
 
-[default.deploy.parameters]
-stack_name = "sam-login-rahul"
-resolve_s3 = true
-s3_prefix = "sam-login-rahul"
+[default.global.parameters]
 region = "us-east-1"
+
+[default.deploy.parameters]
+resolve_s3 = true
 confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
 image_repositories = []
 
-[default.global.parameters]
+[dev.deploy.parameters]
+stack_name = "sam-login-rahul-dev"
+s3_prefix = "sam-login-rahul-dev"
 region = "us-east-1"
+resolve_s3 = true
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Stage=\"dev\""
+
+[staging.deploy.parameters]
+stack_name = "sam-login-rahul-staging"
+s3_prefix = "sam-login-rahul-staging"
+region = "us-east-1"
+resolve_s3 = true
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Stage=\"staging\""
+
+[prod.deploy.parameters]
+stack_name = "sam-login-rahul-prod"
+s3_prefix = "sam-login-rahul-prod"
+region = "us-east-1"
+resolve_s3 = true
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Stage=\"prod\""
